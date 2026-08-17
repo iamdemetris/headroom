@@ -18,7 +18,6 @@ xcrun swiftc \
   -target arm64-apple-macosx14.0 \
   -parse-as-library \
   -O \
-  -framework SwiftUI \
   -framework AppKit \
   -framework UserNotifications \
   -o "$CONTENTS/MacOS/$APP_NAME" \
@@ -27,9 +26,8 @@ xcrun swiftc \
   "$ROOT/Sources/HostStore.swift" \
   "$ROOT/Sources/SSHCollector.swift" \
   "$ROOT/Sources/FleetModel.swift" \
-  "$ROOT/Sources/AddHostView.swift" \
-  "$ROOT/Sources/MenuViews.swift" \
-  "$ROOT/Sources/HeadroomApp.swift"
+  "$ROOT/Sources/PanelController.swift" \
+  "$ROOT/Sources/AppDelegate.swift"
 
 cp "$ROOT/Resources/collector.py" "$CONTENTS/Resources/collector.py"
 
@@ -43,8 +41,8 @@ cat > "$CONTENTS/Info.plist" <<'PLIST'
   <key>CFBundleExecutable</key><string>Headroom</string>
   <key>CFBundleIdentifier</key><string>app.headroom.mac</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>0.1.0</string>
-  <key>CFBundleVersion</key><string>1</string>
+  <key>CFBundleShortVersionString</key><string>0.1.1</string>
+  <key>CFBundleVersion</key><string>2</string>
   <key>LSMinimumSystemVersion</key><string>14.0</string>
   <key>LSUIElement</key><true/>
   <key>NSHighResolutionCapable</key><true/>

@@ -1,13 +1,23 @@
 import Foundation
 
 enum SSHCollector {
-    private static let maxBytes = 64 * 1024
+    private static let maxBytes = 16 * 1024
+    private static let script: Data? = {
+        if let url = Bundle.main.url(forResource: "collector", withExtension: "py") {
+            return try? Data(contentsOf: url)
+        }
+        let dev = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("Resources/collector.py")
+        return try? Data(contentsOf: dev)
+    }()
 
-    static func fetch(host: HostConfig, timeout: TimeInterval = 14) async throws -> HostSnapshot {
+    static func fetch(host: HostConfig, timeout: TimeInterval = 8) async throws -> HostSnapshot {
         guard let target = SSHTarget.validateHost(host.sshHost) else {
             throw PulseError.invalidHost
         }
-        guard let script = collectorScript() else {
+        guard let script else {
             throw PulseError.missingCollector
         }
 
@@ -92,16 +102,5 @@ enum SSHCollector {
             "tell application \"Terminal\" to do script \"\(command)\"",
         ]
         try? process.run()
-    }
-
-    private static func collectorScript() -> Data? {
-        if let url = Bundle.main.url(forResource: "collector", withExtension: "py") {
-            return try? Data(contentsOf: url)
-        }
-        let dev = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .appendingPathComponent("Resources/collector.py")
-        return try? Data(contentsOf: dev)
     }
 }

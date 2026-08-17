@@ -41,23 +41,12 @@ enum SSHTarget {
     }
 }
 
-struct TopProc: Decodable, Identifiable, Sendable {
-    let pid: Int
-    let cpu: Double
-    let mem: Double
-    let name: String
-    var id: Int { pid }
-}
-
 struct HostSnapshot: Decodable, Sendable {
     let host: String
     let cpus: Int
     let load1: Double
     let load5: Double
     let load15: Double
-    let cpuPct: Double
-    let iowaitPct: Double
-    let stealPct: Double
     let memTotalMb: Int
     let memUsedMb: Int
     let memAvailableMb: Int
@@ -67,13 +56,9 @@ struct HostSnapshot: Decodable, Sendable {
     let diskUsedGb: Double
     let diskUsedPct: Int
     let uptimeSec: Int
-    let top: [TopProc]
 
     enum CodingKeys: String, CodingKey {
-        case host, cpus, load1, load5, load15, top
-        case cpuPct = "cpu_pct"
-        case iowaitPct = "iowait_pct"
-        case stealPct = "steal_pct"
+        case host, cpus, load1, load5, load15
         case memTotalMb = "mem_total_mb"
         case memUsedMb = "mem_used_mb"
         case memAvailableMb = "mem_available_mb"
@@ -96,13 +81,7 @@ struct HostSnapshot: Decodable, Sendable {
     }
 
     var pressure: Pressure {
-        Pressure.combined(
-            load: loadRatio,
-            cpu: cpuPct,
-            mem: memRatio,
-            disk: diskUsedPct,
-            steal: stealPct
-        )
+        Pressure.combined(load: loadRatio, mem: memRatio, disk: diskUsedPct)
     }
 }
 
@@ -123,13 +102,11 @@ enum Pressure: Int, Comparable, Sendable {
         }
     }
 
-    static func combined(load: Double, cpu: Double, mem: Double, disk: Int, steal: Double) -> Pressure {
+    static func combined(load: Double, mem: Double, disk: Int) -> Pressure {
         max(
             band(load, warn: 0.60, hot: 1.00),
-            band(cpu / 100, warn: 0.70, hot: 0.90),
             band(mem, warn: 0.70, hot: 0.85),
-            band(Double(disk) / 100, warn: 0.80, hot: 0.90),
-            band(steal / 100, warn: 0.10, hot: 0.25)
+            band(Double(disk) / 100, warn: 0.80, hot: 0.90)
         )
     }
 
@@ -167,7 +144,6 @@ enum PulseError: LocalizedError, Sendable {
     }
 }
 
-@Observable
 @MainActor
 final class HostRuntime: Identifiable {
     nonisolated let id: UUID

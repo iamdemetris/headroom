@@ -8,7 +8,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 NOTARY_PROFILE="${NOTARY_PROFILE:-ludeshot-notary}"
-VERSION="0.1.0"
+VERSION="0.1.1"
 APP="$ROOT/dist/Headroom.app"
 ZIP="$ROOT/dist/Headroom-$VERSION.zip"
 DMG="$ROOT/dist/Headroom-$VERSION.dmg"

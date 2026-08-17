@@ -8,7 +8,7 @@ Add a VPS. See load, memory, disk, and top processes. Add as many hosts as you w
 
 ## Install
 
-Download the notarized `Headroom-0.1.0.dmg` from [Releases](https://github.com/iamdemetris/headroom/releases), open it, and copy **Headroom** to `/Applications` or `~/Applications`.
+Download the notarized `Headroom-0.1.1.dmg` from [Releases](https://github.com/iamdemetris/headroom/releases), open it, and copy **Headroom** to `/Applications` or `~/Applications`.
 
 Or build from source:
 
@@ -27,7 +27,7 @@ Requires macOS 14+ on Apple Silicon.
 
 Headroom only uses key-based SSH (`BatchMode`). It never asks for a password and never stores a key. Your host list lives in `~/Library/Application Support/Headroom/` and is not part of this repository.
 
-The remote machine needs `python3` (default on Ubuntu). Headroom pipes a read-only collector on stdin. It does not write files on the server.
+The remote machine needs `python3` (default on Ubuntu). Headroom pipes a read-only `/proc` collector on stdin every 30 seconds. It does not write files on the server and does not run `ps`.
 
 ## Status
 

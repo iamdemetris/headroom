@@ -1,17 +1,17 @@
 import Foundation
-import Observation
 import UserNotifications
 
-@Observable
 @MainActor
 final class FleetModel {
+    static let pollInterval: Duration = .seconds(30)
+
     var hosts: [HostRuntime] = []
     var selectedID: UUID?
     var showAddHost = false
-    var showWelcome = false
     var alertsEnabled = UserDefaults.standard.object(forKey: "alertsEnabled") as? Bool ?? true {
         didSet { UserDefaults.standard.set(alertsEnabled, forKey: "alertsEnabled") }
     }
+    var onChange: (() -> Void)?
 
     private var loop: Task<Void, Never>?
     private var lastAlert: [UUID: Date] = [:]
@@ -21,21 +21,19 @@ final class FleetModel {
     }
 
     var worstPressure: Pressure? {
-        let values = hosts.compactMap(\.pressure)
-        return values.max()
+        hosts.compactMap(\.pressure).max()
     }
 
     func start() {
         if hosts.isEmpty {
             hosts = HostStore.load().map(HostRuntime.init)
             selectedID = hosts.first?.id
-            showWelcome = hosts.isEmpty
         }
         guard loop == nil else { return }
         loop = Task { [weak self] in
             while let self, !Task.isCancelled {
                 await self.refreshAll()
-                try? await Task.sleep(for: .seconds(12))
+                try? await Task.sleep(for: Self.pollInterval)
             }
         }
     }
@@ -44,9 +42,9 @@ final class FleetModel {
         let runtime = HostRuntime(config: config)
         hosts.append(runtime)
         selectedID = runtime.id
-        persist()
-        showWelcome = false
         showAddHost = false
+        persist()
+        notify()
         Task { await refresh(runtime) }
     }
 
@@ -56,7 +54,17 @@ final class FleetModel {
             selectedID = hosts.first?.id
         }
         persist()
-        showWelcome = hosts.isEmpty
+        notify()
+    }
+
+    func select(_ id: UUID) {
+        selectedID = id
+        notify()
+    }
+
+    func toggleAddHost() {
+        showAddHost.toggle()
+        notify()
     }
 
     func refreshAll() async {
@@ -70,7 +78,11 @@ final class FleetModel {
     func refresh(_ host: HostRuntime) async {
         if host.isRefreshing { return }
         host.isRefreshing = true
-        defer { host.isRefreshing = false }
+        notify()
+        defer {
+            host.isRefreshing = false
+            notify()
+        }
         do {
             let snap = try await SSHCollector.fetch(host: host.config)
             host.snapshot = snap
@@ -80,6 +92,10 @@ final class FleetModel {
         } catch {
             host.lastError = error.localizedDescription
         }
+    }
+
+    func notify() {
+        onChange?()
     }
 
     private func persist() {
