@@ -1,0 +1,14 @@
+dist/
+.DS_Store
+*.swp
+*.p8
+*.p12
+*.cer
+*.mobileprovision
+.env
+.env.*
+*.dmg
+*.zip
+hosts.json
+.idea/
+.vscode/
