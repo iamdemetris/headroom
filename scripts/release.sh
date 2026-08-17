@@ -33,6 +33,8 @@ xcrun stapler staple "$APP"
 echo "==> Building DMG"
 rm -f "$DMG"
 hdiutil create -volname Headroom -srcfolder "$APP" -ov -format UDZO "$DMG"
+echo "==> Notarizing DMG"
+caffeinate -i xcrun notarytool submit "$DMG" --keychain-profile "$NOTARY_PROFILE" --wait
 xcrun stapler staple "$DMG"
 
 echo ""
