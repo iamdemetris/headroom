@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 
 struct HostConfig: Codable, Identifiable, Hashable, Sendable {
     var id: UUID
@@ -144,6 +145,7 @@ enum PulseError: LocalizedError, Sendable {
     }
 }
 
+@Observable
 @MainActor
 final class HostRuntime: Identifiable {
     nonisolated let id: UUID

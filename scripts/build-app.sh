@@ -16,9 +16,9 @@ echo "==> Compiling"
 xcrun swiftc \
   -swift-version 6 \
   -target arm64-apple-macosx14.0 \
-  -parse-as-library \
   -O \
   -framework AppKit \
+  -framework SwiftUI \
   -framework UserNotifications \
   -o "$CONTENTS/MacOS/$APP_NAME" \
   "$ROOT/Sources/Theme.swift" \
@@ -26,8 +26,9 @@ xcrun swiftc \
   "$ROOT/Sources/HostStore.swift" \
   "$ROOT/Sources/SSHCollector.swift" \
   "$ROOT/Sources/FleetModel.swift" \
-  "$ROOT/Sources/PanelController.swift" \
-  "$ROOT/Sources/AppDelegate.swift"
+  "$ROOT/Sources/RootView.swift" \
+  "$ROOT/Sources/AppDelegate.swift" \
+  "$ROOT/Sources/main.swift"
 
 cp "$ROOT/Resources/collector.py" "$CONTENTS/Resources/collector.py"
 
@@ -41,10 +42,11 @@ cat > "$CONTENTS/Info.plist" <<'PLIST'
   <key>CFBundleExecutable</key><string>Headroom</string>
   <key>CFBundleIdentifier</key><string>app.headroom.mac</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>0.1.1</string>
-  <key>CFBundleVersion</key><string>2</string>
+  <key>CFBundleShortVersionString</key><string>0.1.2</string>
+  <key>CFBundleVersion</key><string>3</string>
   <key>LSMinimumSystemVersion</key><string>14.0</string>
-  <key>LSUIElement</key><true/>
+  <key>LSUIElement</key><false/>
+  <key>NSPrincipalClass</key><string>NSApplication</string>
   <key>NSHighResolutionCapable</key><true/>
   <key>NSSupportsAutomaticGraphicsSwitching</key><true/>
   <key>LSApplicationCategoryType</key><string>public.app-category.developer-tools</string>

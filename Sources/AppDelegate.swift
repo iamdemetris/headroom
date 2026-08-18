@@ -1,68 +1,91 @@
 import AppKit
+import SwiftUI
 import UserNotifications
 
-@main
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let fleet = FleetModel()
     private let notificationForwarder = NotificationForwarder()
-    private var statusItem: NSStatusItem!
-    private var popover: NSPopover!
-    private var panel: PanelController!
+    private var statusItem: NSStatusItem?
+    private var window: NSWindow!
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        NSApp.setActivationPolicy(.accessory)
+        let mine = ProcessInfo.processInfo.processIdentifier
+        for app in NSRunningApplication.runningApplications(withBundleIdentifier: "app.headroom.mac")
+        where app.processIdentifier != mine {
+            app.forceTerminate()
+        }
+
+        NSApp.setActivationPolicy(.regular)
         UNUserNotificationCenter.current().delegate = notificationForwarder
 
-        panel = PanelController(fleet: fleet)
-        popover = NSPopover()
-        popover.contentSize = NSSize(width: 380, height: 520)
-        popover.behavior = .transient
-        popover.animates = false
-        popover.contentViewController = panel
+        let host = NSHostingController(rootView: RootView(fleet: fleet))
+        window = NSWindow(contentViewController: host)
+        window.title = "Headroom"
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
+        window.styleMask.insert(.fullSizeContentView)
+        window.styleMask.insert(.resizable)
+        window.backgroundColor = NSColor(srgbRed: 0.043, green: 0.067, blue: 0.102, alpha: 1)
+        window.isMovableByWindowBackground = true
+        window.isReleasedWhenClosed = false
+        window.setContentSize(NSSize(width: 460, height: 640))
+        window.minSize = NSSize(width: 420, height: 520)
+        window.center()
+        window.makeKeyAndOrderFront(nil)
 
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        statusItem.button?.font = NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .medium)
-        statusItem.button?.target = self
-        statusItem.button?.action = #selector(togglePopover)
-        statusItem.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
-
+        installStatusItem()
         fleet.onChange = { [weak self] in
             self?.refreshChrome()
         }
         fleet.start()
         refreshChrome()
+        NSApp.activate(ignoringOtherApps: true)
     }
 
-    @objc private func togglePopover(_ sender: Any?) {
-        guard let button = statusItem.button else { return }
-        if popover.isShown {
-            popover.performClose(sender)
-            return
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        return true
+    }
+
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        false
+    }
+
+    private func installStatusItem() {
+        if statusItem != nil { return }
+        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        item.isVisible = true
+        item.button?.font = NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .semibold)
+        item.button?.title = "Headroom"
+        item.button?.toolTip = "Headroom"
+        item.button?.target = self
+        item.button?.action = #selector(toggleWindow)
+        statusItem = item
+    }
+
+    @objc private func toggleWindow() {
+        if window.isVisible {
+            window.orderOut(nil)
+        } else {
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
         }
-        panel.reload()
-        popover.contentSize = panel.preferredContentSize
-        popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-        popover.contentViewController?.view.window?.makeKey()
     }
 
     private func refreshChrome() {
-        statusItem.button?.title = " " + Formatters.statusTitle(fleet)
-        statusItem.button?.image = dot(Palette.pressure(fleet.worstPressure))
-        statusItem.button?.imagePosition = .imageLeft
-        statusItem.button?.toolTip = fleet.hosts.isEmpty
-            ? "Headroom — add a machine"
-            : "Headroom, \(fleet.hosts.count) machines"
-        if popover.isShown {
-            panel.reload()
-            popover.contentSize = panel.preferredContentSize
-        }
+        installStatusItem()
+        statusItem?.isVisible = true
+        statusItem?.button?.title = Formatters.statusTitle(fleet)
+        statusItem?.button?.image = dot(Palette.pressure(fleet.worstPressure))
+        statusItem?.button?.imagePosition = .imageLeft
     }
 
     private func dot(_ color: NSColor) -> NSImage {
-        let image = NSImage(size: NSSize(width: 8, height: 8), flipped: false) { rect in
+        let image = NSImage(size: NSSize(width: 10, height: 10), flipped: false) { rect in
             color.setFill()
-            NSBezierPath(ovalIn: rect.insetBy(dx: 0.6, dy: 0.6)).fill()
+            NSBezierPath(ovalIn: rect.insetBy(dx: 0.5, dy: 0.5)).fill()
             return true
         }
         image.isTemplate = false

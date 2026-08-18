@@ -30,7 +30,10 @@ cat > "$PLIST_DST" <<PLIST
   <key>Label</key><string>app.headroom.mac</string>
   <key>ProgramArguments</key>
   <array>
-    <string>$APP_DST/Contents/MacOS/Headroom</string>
+    <string>/usr/bin/open</string>
+    <string>-g</string>
+    <string>-a</string>
+    <string>$APP_DST</string>
   </array>
   <key>RunAtLoad</key><true/>
 </dict>
@@ -38,9 +41,12 @@ cat > "$PLIST_DST" <<PLIST
 PLIST
 
 launchctl bootout "gui/$(id -u)/app.headroom.mac" 2>/dev/null || true
+pkill -x Headroom 2>/dev/null || true
+sleep 0.3
 launchctl bootstrap "gui/$(id -u)" "$PLIST_DST"
-launchctl kickstart -k "gui/$(id -u)/app.headroom.mac"
+# open via LaunchServices so the extra actually lands in the menu bar
+open -a "$APP_DST"
 
 echo ""
-echo "Headroom is in the menu bar. Add your own SSH hosts there."
+echo "Headroom should now be in the menu bar as the word Headroom."
 echo "Host lists stay in ~/Library/Application Support/Headroom/ and are never part of the repo."

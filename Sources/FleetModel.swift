@@ -1,6 +1,8 @@
 import Foundation
+import Observation
 import UserNotifications
 
+@Observable
 @MainActor
 final class FleetModel {
     static let pollInterval: Duration = .seconds(30)
