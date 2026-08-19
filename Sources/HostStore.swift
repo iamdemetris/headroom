@@ -3,7 +3,9 @@ import Foundation
 enum HostStore {
     static var fileURL: URL {
         let root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let dir = root.appendingPathComponent("Headroom", isDirectory: true)
+        // Keep the dev build's saved data fully separate from the stable app.
+        let dirName = AppInfo.isDevBuild ? "Headroom Dev" : "Headroom"
+        let dir = root.appendingPathComponent(dirName, isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir.appendingPathComponent("hosts.json")
     }

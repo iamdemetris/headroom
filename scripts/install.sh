@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Install / refresh the stable Headroom app into ~/Applications, register it to
+# launch at login, and start it. Saved hosts are preserved (hosts.json lives
+# outside the app bundle).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -48,5 +51,5 @@ launchctl bootstrap "gui/$(id -u)" "$PLIST_DST"
 open -a "$APP_DST"
 
 echo ""
-echo "Headroom should now be in the menu bar as the word Headroom."
+echo "Headroom should now be in the menu bar."
 echo "Host lists stay in ~/Library/Application Support/Headroom/ and are never part of the repo."

@@ -8,7 +8,7 @@ Add a VPS. See load, memory, disk, and top processes. Add as many hosts as you w
 
 ## Install
 
-Download the notarized `Headroom-0.1.1.dmg` from [Releases](https://github.com/iamdemetris/headroom/releases), open it, and copy **Headroom** to `/Applications` or `~/Applications`.
+Download the notarized `Headroom-<version>.dmg` from [Releases](https://github.com/iamdemetris/headroom/releases), open it, and copy **Headroom** to `/Applications` or `~/Applications`.
 
 Or build from source:
 
@@ -17,6 +17,26 @@ bash scripts/install.sh
 ```
 
 Requires macOS 14+ on Apple Silicon.
+
+## Self-update
+
+The stable app checks GitHub Releases once a day. When a newer release is published you get a notification and an **Update** card inside the window. Clicking **Update** downloads the notarized DMG from the release and swaps the app in place (your saved hosts are untouched).
+
+## Development
+
+Iterate without touching the installed stable app:
+
+```bash
+bash scripts/dev.sh        # builds "Headroom Dev.app" and launches it
+```
+
+The dev build is fully separate (different name, bundle id, and saved-data folder) and shows a **DEV BUILD** badge so you always know which app you're looking at. When a change is ready to ship:
+
+```bash
+bash scripts/release.sh    # signs, notarizes, and publishes a GitHub release + DMG
+```
+
+The stable app will then show the update prompt. Bump the version in `scripts/version.txt` before releasing.
 
 ## Add a machine
 

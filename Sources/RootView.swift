@@ -23,6 +23,7 @@ enum Hue {
 
 struct RootView: View {
     @Bindable var fleet: FleetModel
+    @ObservedObject var updater: UpdateManager
 
     var body: some View {
         ZStack {
@@ -34,14 +35,34 @@ struct RootView: View {
             )
             .ignoresSafeArea()
 
-            if fleet.hosts.isEmpty || fleet.showAddHost {
-                AddMachineView(fleet: fleet)
-            } else {
-                FleetScreen(fleet: fleet)
+            VStack(spacing: 0) {
+                if AppInfo.isDevBuild {
+                    DevBadge()
+                }
+                UpdateBanner(updater: updater)
+                if fleet.hosts.isEmpty || fleet.showAddHost {
+                    AddMachineView(fleet: fleet)
+                } else {
+                    FleetScreen(fleet: fleet)
+                }
             }
         }
         .frame(minWidth: 440, minHeight: 580)
         .preferredColorScheme(.dark)
+    }
+}
+
+struct DevBadge: View {
+    var body: some View {
+        HStack(spacing: 6) {
+            Circle().fill(Hue.busy).frame(width: 7, height: 7)
+            Text("DEV BUILD · \(AppInfo.version)+\(AppInfo.build)")
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundStyle(Hue.busy)
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
     }
 }
 
@@ -433,6 +454,103 @@ struct PrimaryButton: View {
         }
         .buttonStyle(.plain)
         .disabled(!enabled)
+    }
+}
+
+struct UpdateBanner: View {
+    @ObservedObject var updater: UpdateManager
+
+    var body: some View {
+        switch updater.phase {
+        case .idle:
+            EmptyView()
+        case .checking:
+            EmptyView()
+        case .ready(let info):
+            VStack(spacing: 12) {
+                HStack(spacing: 10) {
+                    Image(systemName: "arrow.down.circle.fill")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(Hue.good)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Headroom \(tag(info.tagName)) is ready")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(Hue.text)
+                        Text("A newer version of Headroom is available.")
+                            .font(.system(size: 12))
+                            .foregroundStyle(Hue.mute)
+                    }
+                    Spacer()
+                }
+                HStack {
+                    PrimaryButton(title: "Update", enabled: true) {
+                        updater.install(info)
+                    }
+                    .frame(maxWidth: .infinity)
+                    GhostButton(title: "Release notes", enabled: true) {
+                        if let url = URL(string: info.htmlUrl) {
+                            NSWorkspace.shared.open(url)
+                        }
+                    }
+                    GhostButton(title: "Later", enabled: true) {
+                        updater.dismiss()
+                    }
+                }
+            }
+            .padding(14)
+            .background(Hue.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Hue.good.opacity(0.4), lineWidth: 1)
+            )
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+        case .downloading(let fraction, let info):
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Text("Updating to \(tag(info.tagName))…")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Hue.text)
+                    Spacer()
+                    Text("\(Int(fraction * 100))%")
+                        .font(.system(size: 12, weight: .medium, design: .monospaced))
+                        .foregroundStyle(Hue.mute)
+                }
+                ProgressView(value: fraction)
+                    .tint(Hue.good)
+            }
+            .padding(14)
+            .background(Hue.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Hue.stroke, lineWidth: 1)
+            )
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+        case .failed(let message):
+            HStack {
+                Text("Update failed: \(message)")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Hue.hot)
+                Spacer()
+                Button("Dismiss") { updater.dismiss() }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Hue.mute)
+            }
+            .padding(12)
+            .background(Hue.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Hue.stroke, lineWidth: 1)
+            )
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+        }
+    }
+
+    private func tag(_ t: String) -> String {
+        t.trimmingCharacters(in: CharacterSet(charactersIn: "vV"))
     }
 }
 

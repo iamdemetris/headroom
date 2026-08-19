@@ -12,3 +12,7 @@ dist/
 hosts.json
 .idea/
 .vscode/
+# generated
+Sources/AppInfo.swift
+Resources/icon-src/png/
+Resources/icon-src/Headroom.iconset/

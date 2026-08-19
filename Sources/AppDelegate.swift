@@ -5,23 +5,33 @@ import UserNotifications
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let fleet = FleetModel()
+    private let updater = UpdateManager()
     private let notificationForwarder = NotificationForwarder()
     private var statusItem: NSStatusItem?
     private var window: NSWindow!
+    private var rootHosting: NSHostingController<RootView>?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let mine = ProcessInfo.processInfo.processIdentifier
-        for app in NSRunningApplication.runningApplications(withBundleIdentifier: "app.headroom.mac")
+        let myBundle = Bundle.main.bundleIdentifier ?? AppInfo.bundleID
+        for app in NSRunningApplication.runningApplications(withBundleIdentifier: myBundle)
         where app.processIdentifier != mine {
             app.forceTerminate()
         }
 
         NSApp.setActivationPolicy(.regular)
+        if let icon = Bundle.main.image(forResource: "AppIcon") {
+            NSApp.applicationIconImage = icon
+        }
         UNUserNotificationCenter.current().delegate = notificationForwarder
 
-        let host = NSHostingController(rootView: RootView(fleet: fleet))
+        NSApp.setActivationPolicy(.regular)
+        UNUserNotificationCenter.current().delegate = notificationForwarder
+
+        let host = NSHostingController(rootView: RootView(fleet: fleet, updater: updater))
+        rootHosting = host
         window = NSWindow(contentViewController: host)
-        window.title = "Headroom"
+        window.title = AppInfo.isDevBuild ? "Headroom Dev — DEV" : "Headroom"
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
         window.styleMask.insert(.fullSizeContentView)
@@ -40,6 +50,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         fleet.start()
         refreshChrome()
+
+        // Self-update: check once a day in the background. If a new release
+        // exists the window/banner surfaces it and a notification fires.
+        updater.onPhaseChange = { [weak self] in
+            self?.refreshChrome()
+        }
+        updater.start()
+
         NSApp.activate(ignoringOtherApps: true)
     }
 
@@ -80,6 +98,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem?.button?.title = Formatters.statusTitle(fleet)
         statusItem?.button?.image = dot(Palette.pressure(fleet.worstPressure))
         statusItem?.button?.imagePosition = .imageLeft
+        rootHosting?.rootView = RootView(fleet: fleet, updater: updater)
     }
 
     private func dot(_ color: NSColor) -> NSImage {
