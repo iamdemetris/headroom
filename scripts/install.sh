@@ -2,20 +2,39 @@
 # Install / refresh the stable Headroom app into ~/Applications, register it to
 # launch at login, and start it. Saved hosts are preserved (hosts.json lives
 # outside the app bundle).
+#
+# Prefers the notarized release DMG (same source the self-updater uses) when the
+# version matches scripts/version.txt; otherwise falls back to a local build.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+VERSION="$(cat "$ROOT/scripts/version.txt")"
+GH_REPO="${GH_REPO:-iamdemetris/headroom}"
 APP_SRC="$ROOT/dist/Headroom.app"
 APP_DST="$HOME/Applications/Headroom.app"
 PLIST_DST="$HOME/Library/LaunchAgents/app.headroom.mac.plist"
 
-echo "==> Building"
-bash "$ROOT/scripts/build-app.sh"
+mkdir -p "$HOME/Applications" "$ROOT/dist"
 
-echo "==> Installing $APP_DST"
-mkdir -p "$HOME/Applications"
-rm -rf "$APP_DST"
-cp -R "$APP_SRC" "$APP_DST"
+echo "==> Checking for notarized release $VERSION"
+DMG_URL="https://github.com/$GH_REPO/releases/download/v$VERSION/Headroom-$VERSION.dmg"
+DMG_LOCAL="$ROOT/dist/Headroom-$VERSION.dmg"
+if [[ -f "$DMG_LOCAL" ]] || curl -fL --retry 2 -o "$DMG_LOCAL" "$DMG_URL" 2>/dev/null; then
+  echo "==> Using notarized DMG: $DMG_LOCAL"
+  MOUNT="$ROOT/dist/.install-mount"
+  rm -rf "$MOUNT"; mkdir -p "$MOUNT"
+  hdiutil attach "$DMG_LOCAL" -nobrowse -readonly -mountpoint "$MOUNT" >/dev/null
+  trap 'hdiutil detach "$MOUNT" -quiet >/dev/null 2>&1 || true' EXIT
+  NEW_APP="$(find "$MOUNT" -maxdepth 1 -name '*.app' | head -1)"
+  rm -rf "$APP_DST"
+  cp -R "$NEW_APP" "$APP_DST"
+else
+  echo "==> No release DMG found; building locally"
+  bash "$ROOT/scripts/build-app.sh"
+  echo "==> Installing $APP_DST"
+  rm -rf "$APP_DST"
+  cp -R "$APP_SRC" "$APP_DST"
+fi
 
 # Leave leftover prototype bits behind if this machine once ran them.
 launchctl bootout "gui/$(id -u)/com.lude.vps-pulse" 2>/dev/null || true
@@ -51,5 +70,5 @@ launchctl bootstrap "gui/$(id -u)" "$PLIST_DST"
 open -a "$APP_DST"
 
 echo ""
-echo "Headroom should now be in the menu bar."
+echo "Headroom should now be in the menu bar (installed from the notarized release)."
 echo "Host lists stay in ~/Library/Application Support/Headroom/ and are never part of the repo."
