@@ -33,13 +33,24 @@ final class UpdateManager: NSObject, ObservableObject, URLSessionDownloadDelegat
     // MARK: - API
 
     func start() {
-        // Once a day is plenty for a menu-bar monitor.
-        let last = UserDefaults.standard.object(forKey: Self.repoKey) as? Date
-        if let last, Date().timeIntervalSince(last) < 24 * 60 * 60 { return }
+        // Frequent but light: GitHub releases/latest is tiny (~1KB). First
+        // check immediately (this powers the "push a release -> get the
+        // popup" flow), then re-check at most once per hour.
         Task { await check() }
+        scheduleNextCheck()
+    }
+
+    private func scheduleNextCheck() {
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(3600))
+            guard let self else { return }
+            await self.check()
+            self.scheduleNextCheck()
+        }
     }
 
     func check() async {
+        // Avoid piling on while a previous check/install is in flight.
         guard case .idle = phase else { return }
         phase = .checking
         let repoURL = URL(string: "https://api.github.com/repos/\(Self.repo)/releases/latest")!
